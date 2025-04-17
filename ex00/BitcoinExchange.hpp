@@ -14,7 +14,7 @@ class BitcoinExchange{
         //Attributes
         bool dataFileOpen;
         std::ifstream dataFile;
-        std::map<std::string, double> exchangeRates;
+        std::map<std::string, float> exchangeRates;
 
 
     public:
@@ -28,11 +28,23 @@ class BitcoinExchange{
             virtual const char* what() const throw();
         };
 
-        class WrongFormatFileException: public std::exception{
+        class DatabaseFileOpeningException: public std::exception{
             virtual const char* what() const throw();
         };
+
+        class WrongFormatFileException: public std::exception{
+			private:
+				std::string errorInFile;
+			public:
+				WrongFormatFileException(const std::string &error);
+            	virtual const char* what() const throw();
+				virtual ~WrongFormatFileException() throw();
+        };
+
+
+		void handleInputFile(std::string inputFileName);
 };
 
-std::vector<std::string> split(std::string &str, char delimiter);
+std::vector<std::string> split(std::string &str, std::string &delimiter);
 bool validDate(std::string &date);
 bool validDouble(std::string &numberString);

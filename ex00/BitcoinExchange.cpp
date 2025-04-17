@@ -2,7 +2,8 @@
 
 
 bool validDate(std::string &date) {
-    std::vector<std::string> yearMonthDay = split(date, '-');
+	std::string delimiter("-");
+    std::vector<std::string> yearMonthDay = split(date, delimiter);
     if (yearMonthDay.size() != 3)
         return false;
 
@@ -48,11 +49,11 @@ bool validDate(std::string &date) {
     return false;
 }
 
-bool validDouble(std::string &numberString){
-    double numberDouble;
+bool validFloat(std::string &numberString){
+    float numberFloat;
     std::istringstream numberStream(numberString);
 
-    if (!(numberStream >> numberDouble && numberStream.eof()))
+    if (!(numberStream >> numberFloat && numberStream.eof()))
         return false;
     return true;
 }
@@ -61,35 +62,39 @@ bool validDouble(std::string &numberString){
 BitcoinExchange::BitcoinExchange(): dataFileOpen(false), dataFile("data.csv"){
     // Check if ifstream of data file
     if (!dataFile.good()){
-        std::cout << "Error in opening the file" << std::endl;
-        throw FileOpeningException();
+        throw DatabaseFileOpeningException();
     }
     dataFileOpen = true; // Boolean that tells if the file is open
-    int firstLine = true; // Boolean that teels that we're in the first line of the file
+    size_t line = 1; // Size_t that tells the current line being analyzed
 
     std::string nextLineInFile; // String that stores the next line in the file
+	std::string delimiter(",");
     while(std::getline(dataFile, nextLineInFile)){
-        if (firstLine && nextLineInFile != "date,exchange_rate"){
-            throw WrongFormatFileException();
+        if (line == 1 && nextLineInFile != "date,exchange_rate"){
+            throw WrongFormatFileException(std::string("First line of csv database should be \"date, exchange rate\"."));
         }
-        if (!firstLine){
-            std::vector<std::string> dateAndNumber = split(nextLineInFile, ',');
-            if (dateAndNumber.size() != 2 || !(validDate(dateAndNumber[0])) || !(validDouble(dateAndNumber[1])))
-                throw WrongFormatFileException();
-            double rateDouble;
-            std::istringstream rateDoubleStream(dateAndNumber[1]);
-            rateDoubleStream >> rateDouble;
-            exchangeRates.insert(std::pair<std::string, double>(dateAndNumber[0], rateDouble));
-            //DEBUG std::cout << "Date: " << dateAndNumber[0] << " | Number: " << dateAndNumber[1] << std::endl;              
+        if (line != 1){
+            std::vector<std::string> dateAndNumber = split(nextLineInFile, delimiter);
+            if (dateAndNumber.size() != 2 || !(validDate(dateAndNumber[0])) || !(validFloat(dateAndNumber[1]))){
+				std::stringstream message;
+				message << "Line " << line << " is not correctly formatted";
+                throw WrongFormatFileException(message.str());
+			}
+            double rateFloat;
+            std::istringstream rateFloatStream(dateAndNumber[1]);
+            rateFloatStream >> rateFloat;
+            exchangeRates.insert(std::pair<std::string, double>(dateAndNumber[0], rateFloat));
+            //DEBUG std::cout << "Date: " << dateAndNumber[0] << " | Number: " << dateAndNumber[1] << std::endl;
         }
-        firstLine = false;
+        line++;
     }
 
-    std::map<std::string, double>::iterator it = exchangeRates.begin();
-    while (it != exchangeRates.end()){
-        std::cout << "Date: " << it->first << " | Number: " << it->second << std::endl;
-        it++;
-    }
+	//DEBUG
+    //std::map<std::string, double>::iterator it = exchangeRates.begin();
+    //while (it != exchangeRates.end()){
+    //    std::cout << "Date: " << it->first << " | Number: " << it->second << std::endl;
+    //    it++;
+    //}
 
 }
 
@@ -108,14 +113,24 @@ BitcoinExchange &BitcoinExchange::operator=(const BitcoinExchange &other){
     return *this;}
 
 const char* BitcoinExchange::FileOpeningException::what() const throw(){
-    return "Error: File stream couldn't be opened properly.";
+    return "Error: could not open file.";
 }
+
+const char* BitcoinExchange::DatabaseFileOpeningException::what() const throw(){
+    return "Error: could not open database file.";
+}
+
+BitcoinExchange::WrongFormatFileException::WrongFormatFileException(const std::string &error){
+	errorInFile = "Error: File is in the wrong format: " + error;
+}
+
+BitcoinExchange::WrongFormatFileException::~WrongFormatFileException() throw(){}
 
 const char* BitcoinExchange::WrongFormatFileException::what() const throw(){
-    return "Error: File is in the wrong format.";
+    return errorInFile.c_str();
 }
 
-std::vector<std::string> split(std::string &str, char delimiter){
+std::vector<std::string> split(std::string &str, std::string &delimiter){
     std::vector<std::string> finalStrings;
     std::string stringVersion = str;
 
@@ -123,9 +138,63 @@ std::vector<std::string> split(std::string &str, char delimiter){
     size_t end = stringVersion.find(delimiter);
     while (end != std::string::npos) {
         finalStrings.push_back(stringVersion.substr(begin, end - begin));
-        begin = end + 1;
+        begin = end + delimiter.size();
         end = stringVersion.find(delimiter, begin);
     }
     finalStrings.push_back(stringVersion.substr(begin, stringVersion.size()));
     return finalStrings;
+}
+
+
+void BitcoinExchange::handleInputFile(std::string inputFileName){
+    // Check if ifstream of data file
+	std::ifstream inputFileStream(inputFileName.c_str());
+	std::string delimiter(" | ");
+
+    if (!inputFileStream.good()){
+        throw FileOpeningException();
+    }
+    size_t line = 1; // Size_t that tells the current line being analyzed
+
+    std::string nextLineInFile; // String that stores the next line in the file
+    while(std::getline(inputFileStream, nextLineInFile)){
+        if (line == 1 && nextLineInFile != "date | value"){
+            throw WrongFormatFileException(std::string("First line of csv database should be \"date | value\"."));
+        }
+        if (line != 1){
+            std::vector<std::string> dateAndNumber = split(nextLineInFile, delimiter);
+            if (dateAndNumber.size() != 2 || !(validDate(dateAndNumber[0])) || !(validFloat(dateAndNumber[1]))){
+				std::cout << "Error: bad input => " << nextLineInFile << std::endl;
+				continue;
+			}
+            float rateFloat;
+            std::istringstream rateFloatStream(dateAndNumber[1]);
+            rateFloatStream >> rateFloat;
+			if (rateFloat < 0){
+				std::cout << "Error: not a positive number." << std::endl;
+				continue;
+			} else if (rateFloat > 1000){
+				std::cout << "Error: too large a number." << std::endl;
+				continue;
+			}
+			// Check for the date in the map or the one imediately before
+			std::map<std::string, float>::iterator foundDateIterator = exchangeRates.lower_bound(dateAndNumber[0]);
+            //DEBUG std::cout << "Date: " << dateAndNumber[0] << " | Number: " << dateAndNumber[1] << std::endl;
+			if (foundDateIterator->first == dateAndNumber[0]){
+				// Date was found, use it
+				std::cout << dateAndNumber[0] << " => " << dateAndNumber[1] << " = " << rateFloat * (foundDateIterator->second) << std::endl;
+			} else{
+				if (foundDateIterator == exchangeRates.begin()){
+					// Date was not found and there is no date below that one in the document
+					std::cout << "Error: date not found and no date exists below it." << std::endl;
+				} else{
+					// Date was not found, it points to the one above, so we have to use it--
+					foundDateIterator--;
+					std::cout << dateAndNumber[0] << " => " << dateAndNumber[1] << " = " << rateFloat * (foundDateIterator->second) << std::endl;
+				}
+			}
+		}
+        line++;
+    }
+	inputFileStream.close();
 }
