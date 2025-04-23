@@ -47,4 +47,4 @@ class BitcoinExchange{
 
 std::vector<std::string> split(std::string &str, std::string &delimiter);
 bool validDate(std::string &date);
-bool validDouble(std::string &numberString);
+bool validFloat(std::string &numberString);
