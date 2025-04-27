@@ -1,8 +1,6 @@
 #include "RPN.hpp"
 
-//FORBIDDEN Maps and Vectors!!!!!!
-//FORBIDDEN Maps and Vectors!!!!!!
-//FORBIDDEN Maps and Vectors!!!!!!
+//Containers used: Stack
 
 // Operations to handle: + - / *
 

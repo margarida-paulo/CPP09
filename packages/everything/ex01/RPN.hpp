@@ -1,8 +1,6 @@
 #pragma once
 
-//FORBIDDEN Maps and Vectors!!!!!!
-//FORBIDDEN Maps and Vectors!!!!!!
-//FORBIDDEN Maps and Vectors!!!!!!
+//Containers used: Stack
 
 #include <iostream>
 #include <stack>

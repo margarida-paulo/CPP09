@@ -1,5 +1,7 @@
 #pragma once
 
+//Containers used: Map and Vector
+
 #include <string>
 #include <exception>
 #include <iostream>
@@ -41,10 +43,15 @@ class BitcoinExchange{
 				virtual ~WrongFormatFileException() throw();
         };
 
-
+        class WrongDateException: public std::exception{
+            public:
+            //virtual const char* what() const throw();
+        };
+        
 		void handleInputFile(std::string inputFileName);
 };
 
-std::vector<std::string> split(std::string &str, std::string &delimiter);
+std::string* splitIntoNumber(std::string &str, std::string &delimiter, size_t numberOfParts);
 bool validDate(std::string &date);
 bool validFloat(std::string &numberString);
+
